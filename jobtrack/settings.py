@@ -99,29 +99,46 @@ ASGI_APPLICATION = "jobtrack.asgi.application"
 # testing without a MySQL server, set DB_ENGINE=sqlite in your .env file and
 # the project will fall back to SQLite automatically.
 # ---------------------------------------------------------------------------
-DB_ENGINE = config("DB_ENGINE", default="mysql")
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+DATABASE_URL = config("DATABASE_URL", default="")
 
-if DB_ENGINE == "sqlite":
+if DATABASE_URL:
+    # Production database (PostgreSQL / Neon / Render PostgreSQL)
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
     }
+
 else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": config("DATABASE_NAME", default="jobtrack_db"),
-            "USER": config("DATABASE_USER", default="root"),
-            "PASSWORD": config("DATABASE_PASSWORD", default=""),
-            "HOST": config("DATABASE_HOST", default="127.0.0.1"),
-            "PORT": config("DATABASE_PORT", default="3306"),
-            "OPTIONS": {
-                "charset": "utf8mb4",
-            },
+    # Local development
+    DB_ENGINE = config("DB_ENGINE", default="mysql")
+
+    if DB_ENGINE == "sqlite":
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
         }
-    }
+    else:
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.mysql",
+                "NAME": config("DATABASE_NAME", default="jobtrack_db"),
+                "USER": config("DATABASE_USER", default="root"),
+                "PASSWORD": config("DATABASE_PASSWORD", default=""),
+                "HOST": config("DATABASE_HOST", default="127.0.0.1"),
+                "PORT": config("DATABASE_PORT", default="3306"),
+                "OPTIONS": {
+                    "charset": "utf8mb4",
+                },
+            }
+        }
 
 # ---------------------------------------------------------------------------
 # Custom user model
