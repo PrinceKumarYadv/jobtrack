@@ -9,6 +9,7 @@ interviews and application statistics.
 from pathlib import Path
 from datetime import timedelta
 from decouple import config, Csv
+import dj_database_url
 
 # ---------------------------------------------------------------------------
 # Base paths
