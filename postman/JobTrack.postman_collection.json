@@ -1,0 +1,293 @@
+{
+  "info": {
+    "name": "JobTrack API",
+    "description": "Complete API collection for the JobTrack Job Application Tracker. Set the {{base_url}}, {{access_token}}, {{refresh_token}} and {{application_id}} / {{interview_id}} variables (login first to auto-populate tokens if you enable the test scripts).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "application_id", "value": "1" },
+    { "key": "interview_id", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/register/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"StrongPass123\",\n  \"confirm_password\": \"StrongPass123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.tokens) {",
+                  "  pm.collectionVariables.set('access_token', data.tokens.access);",
+                  "  pm.collectionVariables.set('refresh_token', data.tokens.refresh);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/login/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane@example.com\",\n  \"password\": \"StrongPass123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/token/refresh/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/api/logout/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/profile/"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/api/profile/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Jane A. Doe\",\n  \"email\": \"jane@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/api/profile/change-password/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"old_password\": \"StrongPass123\",\n  \"new_password\": \"NewStrongPass456\",\n  \"confirm_new_password\": \"NewStrongPass456\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "List Applications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/applications/?search=python&status=Applied&job_type=Internship&priority=High&ordering=-application_date",
+              "host": ["{{base_url}}"],
+              "path": ["api", "applications", ""],
+              "query": [
+                { "key": "search", "value": "python" },
+                { "key": "status", "value": "Applied" },
+                { "key": "job_type", "value": "Internship" },
+                { "key": "priority", "value": "High" },
+                { "key": "ordering", "value": "-application_date" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Application",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.id) pm.collectionVariables.set('application_id', data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/api/applications/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_name\": \"Google\",\n  \"company_website\": \"https://careers.google.com\",\n  \"company_location\": \"Bengaluru\",\n  \"company_industry\": \"Technology\",\n  \"job_title\": \"Software Engineer Intern\",\n  \"job_type\": \"Internship\",\n  \"location\": \"Bengaluru\",\n  \"salary\": 600000,\n  \"job_url\": \"https://careers.google.com/jobs/123\",\n  \"application_date\": \"2026-01-15\",\n  \"status\": \"Applied\",\n  \"priority\": \"High\",\n  \"notes\": \"Referred by a friend.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Application Details",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/applications/{{application_id}}/"
+          }
+        },
+        {
+          "name": "Update Application",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/api/applications/{{application_id}}/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_name\": \"Google\",\n  \"job_title\": \"Software Engineer Intern\",\n  \"job_type\": \"Internship\",\n  \"location\": \"Bengaluru\",\n  \"salary\": 650000,\n  \"job_url\": \"https://careers.google.com/jobs/123\",\n  \"application_date\": \"2026-01-15\",\n  \"status\": \"Interview\",\n  \"priority\": \"High\",\n  \"notes\": \"Moved to interview round.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Application",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/applications/{{application_id}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Interviews",
+      "item": [
+        {
+          "name": "List Interviews",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/interviews/"
+          }
+        },
+        {
+          "name": "Create Interview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.id) pm.collectionVariables.set('interview_id', data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/api/interviews/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"application\": {{application_id}},\n  \"interview_date\": \"2026-02-01\",\n  \"interview_time\": \"10:00:00\",\n  \"interview_type\": \"Technical\",\n  \"interviewer\": \"Alex Smith\",\n  \"meeting_link\": \"https://meet.google.com/xyz\",\n  \"result\": \"Pending\",\n  \"notes\": \"Round 1 - DSA\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Interview Details",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/interviews/{{interview_id}}/"
+          }
+        },
+        {
+          "name": "Update Interview",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/api/interviews/{{interview_id}}/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"application\": {{application_id}},\n  \"interview_date\": \"2026-02-01\",\n  \"interview_time\": \"11:00:00\",\n  \"interview_type\": \"Technical\",\n  \"interviewer\": \"Alex Smith\",\n  \"meeting_link\": \"https://meet.google.com/xyz\",\n  \"result\": \"Passed\",\n  \"notes\": \"Cleared round 1.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Interview",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/interviews/{{interview_id}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/api/dashboard/"
+          }
+        }
+      ]
+    }
+  ]
+}

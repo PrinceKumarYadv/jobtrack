@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h2 class="jt-page-title mb-1">Profile</h2>
+  <p class="jt-page-subtitle mb-0">Manage your account details and password.</p>
+</div>
+
+<div id="alertBox"></div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="jt-card p-4">
+      <h6 class="fw-semibold mb-3">Account Details</h6>
+      <p class="text-muted small mb-3">Account created: <span id="createdAt">-</span></p>
+      <form id="profileForm" novalidate>
+        <div class="mb-3">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-control" id="fullName" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" id="email" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="profileSubmitBtn">
+          <span class="spinner-border spinner-border-sm d-none" id="profileSpinner"></span>
+          Save Changes
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="jt-card p-4">
+      <h6 class="fw-semibold mb-3">Change Password</h6>
+      <form id="passwordForm" novalidate>
+        <div class="mb-3">
+          <label class="form-label">Current Password</label>
+          <input type="password" class="form-control" id="oldPassword" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">New Password</label>
+          <input type="password" class="form-control" id="newPassword" minlength="8" required>
+          <div class="form-text">At least 8 characters.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Confirm New Password</label>
+          <input type="password" class="form-control" id="confirmNewPassword" minlength="8" required>
+        </div>
+        <button type="submit" class="btn btn-outline-primary" id="passwordSubmitBtn">
+          <span class="spinner-border spinner-border-sm d-none" id="passwordSpinner"></span>
+          Update Password
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  if (!JobTrack.requireAuth()) { /* redirected */ }
+
+  async function loadProfile() {
+    try {
+      const user = await JobTrack.apiFetch("/api/profile/");
+      document.getElementById("fullName").value = user.full_name;
+      document.getElementById("email").value = user.email;
+      document.getElementById("createdAt").textContent = JobTrack.formatDate(user.created_at.slice(0, 10));
+      JobTrack.setSession({ user });
+    } catch (err) {
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    }
+  }
+
+  document.getElementById("profileForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    JobTrack.clearAlert("alertBox");
+    const btn = document.getElementById("profileSubmitBtn");
+    const spinner = document.getElementById("profileSpinner");
+    btn.disabled = true;
+    spinner.classList.remove("d-none");
+
+    try {
+      const user = await JobTrack.apiFetch("/api/profile/", {
+        method: "PUT",
+        body: {
+          full_name: document.getElementById("fullName").value.trim(),
+          email: document.getElementById("email").value.trim(),
+        },
+      });
+      JobTrack.setSession({ user });
+      JobTrack.showAlert("alertBox", "Profile updated successfully.", "success");
+    } catch (err) {
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    } finally {
+      btn.disabled = false;
+      spinner.classList.add("d-none");
+    }
+  });
+
+  document.getElementById("passwordForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    JobTrack.clearAlert("alertBox");
+
+    const newPassword = document.getElementById("newPassword").value;
+    const confirmNewPassword = document.getElementById("confirmNewPassword").value;
+    if (newPassword !== confirmNewPassword) {
+      JobTrack.showAlert("alertBox", "New passwords do not match.");
+      return;
+    }
+
+    const btn = document.getElementById("passwordSubmitBtn");
+    const spinner = document.getElementById("passwordSpinner");
+    btn.disabled = true;
+    spinner.classList.remove("d-none");
+
+    try {
+      await JobTrack.apiFetch("/api/profile/change-password/", {
+        method: "POST",
+        body: {
+          old_password: document.getElementById("oldPassword").value,
+          new_password: newPassword,
+          confirm_new_password: confirmNewPassword,
+        },
+      });
+      JobTrack.showAlert("alertBox", "Password updated successfully.", "success");
+      document.getElementById("passwordForm").reset();
+    } catch (err) {
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    } finally {
+      btn.disabled = false;
+      spinner.classList.add("d-none");
+    }
+  });
+
+  loadProfile();
+</script>
+{% endblock %}

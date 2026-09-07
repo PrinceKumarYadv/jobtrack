@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Interviews{% endblock %}
+
+{% block content %}
+<div id="alertBox"></div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h2 class="jt-page-title mb-1">Interviews</h2>
+    <p class="jt-page-subtitle mb-0">All interview rounds across your applications.</p>
+  </div>
+</div>
+
+<div class="jt-card p-0">
+  <div class="table-responsive">
+    <table class="table table-jt align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Company</th>
+          <th>Job Title</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Type</th>
+          <th>Interviewer</th>
+          <th>Result</th>
+          <th>Meeting Link</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="interviewsTableBody">
+        <tr><td colspan="9" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Deletion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">Are you sure you want to delete this interview?</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  if (!JobTrack.requireAuth()) { /* redirected */ }
+
+  let pendingDeleteId = null;
+  const deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
+
+  function resultBadge(result) {
+    const cls = result === "Passed" ? "bg-success-subtle text-success"
+      : result === "Failed" ? "bg-danger-subtle text-danger"
+      : "bg-secondary-subtle text-secondary";
+    return `<span class="badge ${cls}">${result}</span>`;
+  }
+
+  async function loadInterviews() {
+    const tbody = document.getElementById("interviewsTableBody");
+    try {
+      const data = await JobTrack.apiFetch("/api/interviews/?ordering=interview_date");
+      const interviews = data.results;
+      if (!interviews.length) {
+        tbody.innerHTML = `<tr><td colspan="9"><div class="jt-empty-state"><i class="bi bi-calendar-x"></i>No interviews yet. Add one from an application's detail page.</div></td></tr>`;
+        return;
+      }
+      tbody.innerHTML = interviews.map((i) => `
+        <tr>
+          <td class="fw-semibold">${JobTrack.escapeHtml(i.company_name)}</td>
+          <td>${JobTrack.escapeHtml(i.job_title)}</td>
+          <td>${JobTrack.formatDate(i.interview_date)}</td>
+          <td>${JobTrack.formatTime(i.interview_time)}</td>
+          <td>${i.interview_type}</td>
+          <td>${JobTrack.escapeHtml(i.interviewer || "-")}</td>
+          <td>${resultBadge(i.result)}</td>
+          <td>${i.meeting_link ? `<a href="${JobTrack.escapeHtml(i.meeting_link)}" target="_blank">Join</a>` : "-"}</td>
+          <td class="text-end">
+            <a href="/applications/${i.application}/" class="btn btn-sm btn-outline-secondary me-1" title="View Application"><i class="bi bi-eye"></i></a>
+            <a href="/interviews/${i.id}/edit/?application=${i.application}" class="btn btn-sm btn-outline-primary me-1" title="Edit"><i class="bi bi-pencil"></i></a>
+            <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="confirmDelete(${i.id})"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>`).join("");
+    } catch (err) {
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    }
+  }
+
+  function confirmDelete(id) {
+    pendingDeleteId = id;
+    deleteModal.show();
+  }
+
+  document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+    if (!pendingDeleteId) return;
+    try {
+      await JobTrack.apiFetch(`/api/interviews/${pendingDeleteId}/`, { method: "DELETE" });
+      deleteModal.hide();
+      JobTrack.showAlert("alertBox", "Interview deleted successfully.", "success");
+      loadInterviews();
+    } catch (err) {
+      deleteModal.hide();
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    }
+  });
+
+  JobTrack.consumeFlash("alertBox");
+  loadInterviews();
+</script>
+{% endblock %}

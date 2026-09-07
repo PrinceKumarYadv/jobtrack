@@ -1,0 +1,32 @@
+# Render Blueprint — optional one-click deploy config.
+# You can also just create the Web Service manually in the Render dashboard
+# (see README's "Deploying to Render" section) instead of using this file.
+
+services:
+  - type: web
+    name: jobtrack
+    runtime: python
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn jobtrack.wsgi:application"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: DB_ENGINE
+        value: mysql
+      - key: DATABASE_NAME
+        sync: false
+      - key: DATABASE_USER
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: DATABASE_HOST
+        sync: false
+      - key: DATABASE_PORT
+        sync: false
+      - key: CORS_ALLOW_ALL_ORIGINS
+        value: "True"
+      - key: PYTHON_VERSION
+        value: "3.12.3"

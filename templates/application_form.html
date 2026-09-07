@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}{% if application_id %}Edit{% else %}Add{% endif %} Application{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h2 class="jt-page-title mb-1" id="formTitle">{% if application_id %}Edit Application{% else %}Add New Application{% endif %}</h2>
+  <p class="jt-page-subtitle mb-0">Fill in the details of the job application below.</p>
+</div>
+
+<div id="alertBox"></div>
+
+<div class="jt-card p-4" style="max-width: 760px;">
+  <form id="applicationForm" novalidate>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Company Name <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="companyName" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Job Title <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="jobTitle" required>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Job Type <span class="text-danger">*</span></label>
+        <select class="form-select" id="jobType" required>
+          <option>Full Time</option>
+          <option>Part Time</option>
+          <option>Internship</option>
+          <option>Contract</option>
+          <option>Remote</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Location</label>
+        <input type="text" class="form-control" id="location">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Salary (annual)</label>
+        <input type="number" min="0" step="0.01" class="form-control" id="salary" placeholder="e.g. 600000">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Job URL</label>
+        <input type="url" class="form-control" id="jobUrl" placeholder="https://...">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Application Date <span class="text-danger">*</span></label>
+        <input type="date" class="form-control" id="applicationDate" required>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Status <span class="text-danger">*</span></label>
+        <select class="form-select" id="status" required>
+          <option>Applied</option>
+          <option>Shortlisted</option>
+          <option>Interview</option>
+          <option>Selected</option>
+          <option>Rejected</option>
+          <option>Withdrawn</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Priority <span class="text-danger">*</span></label>
+        <select class="form-select" id="priority" required>
+          <option>Low</option>
+          <option selected>Medium</option>
+          <option>High</option>
+        </select>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Notes</label>
+        <textarea class="form-control" id="notes" rows="3" placeholder="Any additional notes..."></textarea>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mt-4">
+      <button type="submit" class="btn btn-primary" id="submitBtn">
+        <span class="spinner-border spinner-border-sm d-none" id="submitSpinner"></span>
+        <span id="submitBtnText">Save Application</span>
+      </button>
+      <a href="/applications/" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  if (!JobTrack.requireAuth()) { /* redirected */ }
+
+  const applicationId = {{ application_id|default:"null" }};
+
+  async function loadExisting() {
+    if (!applicationId) {
+      document.getElementById("applicationDate").valueAsDate = new Date();
+      return;
+    }
+    try {
+      const app = await JobTrack.apiFetch(`/api/applications/${applicationId}/`);
+      document.getElementById("companyName").value = app.company.company_name;
+      document.getElementById("jobTitle").value = app.job_title;
+      document.getElementById("jobType").value = app.job_type;
+      document.getElementById("location").value = app.location || "";
+      document.getElementById("salary").value = app.salary || "";
+      document.getElementById("jobUrl").value = app.job_url || "";
+      document.getElementById("applicationDate").value = app.application_date;
+      document.getElementById("status").value = app.status;
+      document.getElementById("priority").value = app.priority;
+      document.getElementById("notes").value = app.notes || "";
+    } catch (err) {
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    }
+  }
+
+  document.getElementById("applicationForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    JobTrack.clearAlert("alertBox");
+
+    const btn = document.getElementById("submitBtn");
+    const spinner = document.getElementById("submitSpinner");
+    btn.disabled = true;
+    spinner.classList.remove("d-none");
+
+    const payload = {
+      company_name: document.getElementById("companyName").value.trim(),
+      job_title: document.getElementById("jobTitle").value.trim(),
+      job_type: document.getElementById("jobType").value,
+      location: document.getElementById("location").value.trim(),
+      salary: document.getElementById("salary").value || null,
+      job_url: document.getElementById("jobUrl").value.trim(),
+      application_date: document.getElementById("applicationDate").value,
+      status: document.getElementById("status").value,
+      priority: document.getElementById("priority").value,
+      notes: document.getElementById("notes").value.trim(),
+    };
+
+    try {
+      if (applicationId) {
+        await JobTrack.apiFetch(`/api/applications/${applicationId}/`, { method: "PUT", body: payload });
+        JobTrack.setFlash("Application updated successfully.");
+      } else {
+        await JobTrack.apiFetch("/api/applications/", { method: "POST", body: payload });
+        JobTrack.setFlash("Application added successfully.");
+      }
+      window.location.href = "/applications/";
+    } catch (err) {
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+      btn.disabled = false;
+      spinner.classList.add("d-none");
+    }
+  });
+
+  loadExisting();
+</script>
+{% endblock %}

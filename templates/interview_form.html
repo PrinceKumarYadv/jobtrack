@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}{% if interview_id %}Edit{% else %}Add{% endif %} Interview{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h2 class="jt-page-title mb-1">{% if interview_id %}Edit Interview{% else %}Add Interview{% endif %}</h2>
+  <p class="jt-page-subtitle mb-0" id="formSubtitle">Schedule or update an interview round for this application.</p>
+</div>
+
+<div id="alertBox"></div>
+
+<div class="jt-card p-4" style="max-width: 720px;">
+  <form id="interviewForm" novalidate>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Interview Date <span class="text-danger">*</span></label>
+        <input type="date" class="form-control" id="interviewDate" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Interview Time <span class="text-danger">*</span></label>
+        <input type="time" class="form-control" id="interviewTime" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Interview Type <span class="text-danger">*</span></label>
+        <select class="form-select" id="interviewType" required>
+          <option>Phone</option>
+          <option>Video</option>
+          <option>Technical</option>
+          <option>HR</option>
+          <option>Onsite</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Result</label>
+        <select class="form-select" id="result">
+          <option>Pending</option>
+          <option>Passed</option>
+          <option>Failed</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Interviewer</label>
+        <input type="text" class="form-control" id="interviewer">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Meeting Link</label>
+        <input type="url" class="form-control" id="meetingLink" placeholder="https://...">
+      </div>
+      <div class="col-12">
+        <label class="form-label">Notes</label>
+        <textarea class="form-control" id="notes" rows="3"></textarea>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mt-4">
+      <button type="submit" class="btn btn-primary" id="submitBtn">
+        <span class="spinner-border spinner-border-sm d-none" id="submitSpinner"></span>
+        Save Interview
+      </button>
+      <a href="#" class="btn btn-outline-secondary" id="cancelBtn">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  if (!JobTrack.requireAuth()) { /* redirected */ }
+
+  const interviewId = {{ interview_id|default:"null" }};
+  const applicationId = {{ application_id|default:"null" }};
+  const backUrl = applicationId ? `/applications/${applicationId}/` : "/interviews/";
+  document.getElementById("cancelBtn").href = backUrl;
+
+  async function loadExisting() {
+    if (!interviewId) return;
+    try {
+      const interview = await JobTrack.apiFetch(`/api/interviews/${interviewId}/`);
+      document.getElementById("interviewDate").value = interview.interview_date;
+      document.getElementById("interviewTime").value = interview.interview_time.slice(0, 5);
+      document.getElementById("interviewType").value = interview.interview_type;
+      document.getElementById("result").value = interview.result;
+      document.getElementById("interviewer").value = interview.interviewer || "";
+      document.getElementById("meetingLink").value = interview.meeting_link || "";
+      document.getElementById("notes").value = interview.notes || "";
+      document.getElementById("formSubtitle").textContent =
+        `Editing interview for ${interview.job_title} at ${interview.company_name}`;
+    } catch (err) {
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    }
+  }
+
+  document.getElementById("interviewForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    JobTrack.clearAlert("alertBox");
+
+    if (!interviewId && !applicationId) {
+      JobTrack.showAlert("alertBox", "Missing application reference. Please add this interview from an application's detail page.");
+      return;
+    }
+
+    const btn = document.getElementById("submitBtn");
+    const spinner = document.getElementById("submitSpinner");
+    btn.disabled = true;
+    spinner.classList.remove("d-none");
+
+    const payload = {
+      interview_date: document.getElementById("interviewDate").value,
+      interview_time: document.getElementById("interviewTime").value,
+      interview_type: document.getElementById("interviewType").value,
+      result: document.getElementById("result").value,
+      interviewer: document.getElementById("interviewer").value.trim(),
+      meeting_link: document.getElementById("meetingLink").value.trim(),
+      notes: document.getElementById("notes").value.trim(),
+    };
+    if (!interviewId) payload.application = applicationId;
+
+    try {
+      let targetApp = applicationId;
+      if (interviewId) {
+        const updated = await JobTrack.apiFetch(`/api/interviews/${interviewId}/`, { method: "PATCH", body: payload });
+        targetApp = updated.application;
+        JobTrack.setFlash("Interview updated successfully.");
+      } else {
+        await JobTrack.apiFetch("/api/interviews/", { method: "POST", body: payload });
+        JobTrack.setFlash("Interview added successfully.");
+      }
+      window.location.href = targetApp ? `/applications/${targetApp}/` : "/interviews/";
+    } catch (err) {
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+      btn.disabled = false;
+      spinner.classList.add("d-none");
+    }
+  });
+
+  loadExisting();
+</script>
+{% endblock %}

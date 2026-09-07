@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Login{% endblock %}
+
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="text-center mb-4">
+      <a href="/login/" class="jt-brand text-decoration-none d-inline-flex align-items-center">
+        <i class="bi bi-briefcase-fill me-2"></i>JobTrack
+      </a>
+      <p class="jt-page-subtitle mt-2 mb-0">Welcome back. Log in to track your applications.</p>
+    </div>
+
+    <div id="alertBox"></div>
+
+    <form id="loginForm" novalidate>
+      <div class="mb-3">
+        <label for="email" class="form-label">Email address</label>
+        <input type="email" class="form-control" id="email" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100" id="loginBtn">
+        <span class="spinner-border spinner-border-sm d-none" id="loginSpinner"></span>
+        Log In
+      </button>
+    </form>
+
+    <p class="text-center mt-4 mb-0 text-muted small">
+      Don't have an account? <a href="/register/">Create one</a>
+    </p>
+
+    <div class="demo-banner mt-4 small">
+      <i class="bi bi-info-circle me-1"></i>
+      Demo login (after running <code>load_sample_data</code>):
+      <strong>demo@jobtrack.dev</strong> / <strong>DemoPass123</strong>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  if (JobTrack.isLoggedIn()) window.location.href = "/";
+
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    JobTrack.clearAlert("alertBox");
+
+    const btn = document.getElementById("loginBtn");
+    const spinner = document.getElementById("loginSpinner");
+    btn.disabled = true;
+    spinner.classList.remove("d-none");
+
+    try {
+      const data = await JobTrack.apiFetch("/api/login/", {
+        method: "POST",
+        body: {
+          email: document.getElementById("email").value.trim(),
+          password: document.getElementById("password").value,
+        },
+      });
+      JobTrack.setSession({ access: data.tokens.access, refresh: data.tokens.refresh, user: data.user });
+      window.location.href = "/";
+    } catch (err) {
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    } finally {
+      btn.disabled = false;
+      spinner.classList.add("d-none");
+    }
+  });
+</script>
+{% endblock %}

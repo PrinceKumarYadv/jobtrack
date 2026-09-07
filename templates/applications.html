@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}Applications{% endblock %}
+
+{% block content %}
+<div id="alertBox"></div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h2 class="jt-page-title mb-1">Job Applications</h2>
+    <p class="jt-page-subtitle mb-0">Search, filter and manage every application in one place.</p>
+  </div>
+  <a href="/applications/add/" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add Application</a>
+</div>
+
+<div class="jt-card p-3 mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-lg-4 col-md-6">
+      <label class="form-label small mb-1">Search</label>
+      <input type="text" class="form-control" id="searchInput" placeholder="Company, job title or location...">
+    </div>
+    <div class="col-lg-2 col-md-6">
+      <label class="form-label small mb-1">Status</label>
+      <select class="form-select" id="statusFilter">
+        <option value="">All</option>
+        <option>Applied</option>
+        <option>Shortlisted</option>
+        <option>Interview</option>
+        <option>Selected</option>
+        <option>Rejected</option>
+        <option>Withdrawn</option>
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-6">
+      <label class="form-label small mb-1">Job Type</label>
+      <select class="form-select" id="jobTypeFilter">
+        <option value="">All</option>
+        <option>Full Time</option>
+        <option>Part Time</option>
+        <option>Internship</option>
+        <option>Contract</option>
+        <option>Remote</option>
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-6">
+      <label class="form-label small mb-1">Priority</label>
+      <select class="form-select" id="priorityFilter">
+        <option value="">All</option>
+        <option>Low</option>
+        <option>Medium</option>
+        <option>High</option>
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-6">
+      <label class="form-label small mb-1">Sort by Date</label>
+      <select class="form-select" id="orderingFilter">
+        <option value="-application_date">Newest first</option>
+        <option value="application_date">Oldest first</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="jt-card p-0">
+  <div class="table-responsive">
+    <table class="table table-jt align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Company</th>
+          <th>Job Title</th>
+          <th>Location</th>
+          <th>Job Type</th>
+          <th>Application Date</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="applicationsTableBody">
+        <tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<nav class="d-flex justify-content-between align-items-center mt-3">
+  <span class="text-muted small" id="resultsSummary"></span>
+  <ul class="pagination mb-0" id="pagination"></ul>
+</nav>
+
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Deletion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete this application?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  if (!JobTrack.requireAuth()) { /* redirected */ }
+
+  let currentPage = 1;
+  let pendingDeleteId = null;
+  let debounceTimer = null;
+  const deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
+
+  function buildQuery(page) {
+    const params = new URLSearchParams();
+    params.set("page", page);
+    const search = document.getElementById("searchInput").value.trim();
+    const status = document.getElementById("statusFilter").value;
+    const jobType = document.getElementById("jobTypeFilter").value;
+    const priority = document.getElementById("priorityFilter").value;
+    const ordering = document.getElementById("orderingFilter").value;
+    if (search) params.set("search", search);
+    if (status) params.set("status", status);
+    if (jobType) params.set("job_type", jobType);
+    if (priority) params.set("priority", priority);
+    if (ordering) params.set("ordering", ordering);
+    return params.toString();
+  }
+
+  async function loadApplications(page = 1) {
+    currentPage = page;
+    const tbody = document.getElementById("applicationsTableBody");
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
+
+    try {
+      const data = await JobTrack.apiFetch(`/api/applications/?${buildQuery(page)}`);
+      renderTable(data.results);
+      renderPagination(data);
+      renderSummary(data);
+    } catch (err) {
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    }
+  }
+
+  function renderTable(applications) {
+    const tbody = document.getElementById("applicationsTableBody");
+    if (!applications.length) {
+      tbody.innerHTML = `<tr><td colspan="8"><div class="jt-empty-state"><i class="bi bi-inbox"></i>No applications found. Try adjusting your filters.</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = applications.map((app) => `
+      <tr>
+        <td class="fw-semibold">${JobTrack.escapeHtml(app.company_name)}</td>
+        <td>${JobTrack.escapeHtml(app.job_title)}</td>
+        <td>${JobTrack.escapeHtml(app.location || "-")}</td>
+        <td>${JobTrack.escapeHtml(app.job_type)}</td>
+        <td>${JobTrack.formatDate(app.application_date)}</td>
+        <td>${JobTrack.statusBadge(app.status)}</td>
+        <td>${JobTrack.priorityBadge(app.priority)}</td>
+        <td class="text-end">
+          <a href="/applications/${app.id}/" class="btn btn-sm btn-outline-secondary me-1" title="View"><i class="bi bi-eye"></i></a>
+          <a href="/applications/${app.id}/edit/" class="btn btn-sm btn-outline-primary me-1" title="Edit"><i class="bi bi-pencil"></i></a>
+          <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="confirmDelete(${app.id})"><i class="bi bi-trash"></i></button>
+        </td>
+      </tr>`).join("");
+  }
+
+  function renderSummary(data) {
+    document.getElementById("resultsSummary").textContent = `${data.count} application${data.count === 1 ? "" : "s"} found`;
+  }
+
+  function renderPagination(data) {
+    const pageSize = 10;
+    const totalPages = Math.max(1, Math.ceil(data.count / pageSize));
+    const pagination = document.getElementById("pagination");
+    if (totalPages <= 1) { pagination.innerHTML = ""; return; }
+
+    let html = "";
+    html += `<li class="page-item ${currentPage === 1 ? "disabled" : ""}"><a class="page-link" href="#" onclick="loadApplications(${currentPage - 1});return false;">Previous</a></li>`;
+    for (let p = 1; p <= totalPages; p++) {
+      html += `<li class="page-item ${p === currentPage ? "active" : ""}"><a class="page-link" href="#" onclick="loadApplications(${p});return false;">${p}</a></li>`;
+    }
+    html += `<li class="page-item ${currentPage === totalPages ? "disabled" : ""}"><a class="page-link" href="#" onclick="loadApplications(${currentPage + 1});return false;">Next</a></li>`;
+    pagination.innerHTML = html;
+  }
+
+  function confirmDelete(id) {
+    pendingDeleteId = id;
+    deleteModal.show();
+  }
+
+  document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+    if (!pendingDeleteId) return;
+    try {
+      await JobTrack.apiFetch(`/api/applications/${pendingDeleteId}/`, { method: "DELETE" });
+      deleteModal.hide();
+      JobTrack.showAlert("alertBox", "Application deleted successfully.", "success");
+      loadApplications(currentPage);
+    } catch (err) {
+      deleteModal.hide();
+      JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    }
+  });
+
+  ["statusFilter", "jobTypeFilter", "priorityFilter", "orderingFilter"].forEach((id) => {
+    document.getElementById(id).addEventListener("change", () => loadApplications(1));
+  });
+
+  document.getElementById("searchInput").addEventListener("input", () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => loadApplications(1), 400);
+  });
+
+  JobTrack.consumeFlash("alertBox");
+  loadApplications(1);
+</script>
+{% endblock %}

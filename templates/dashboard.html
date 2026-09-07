@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div id="alertBox"></div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="jt-page-title mb-1">Dashboard</h2>
+    <p class="jt-page-subtitle mb-0">An overview of all your job applications.</p>
+  </div>
+  <a href="/applications/add/" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add Application</a>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4" id="statCards">
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="stat-icon bg-primary-subtle text-primary mb-2"><i class="bi bi-stack"></i></div>
+      <div class="stat-value" id="statTotal">-</div>
+      <div class="stat-label">Total</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="stat-icon bg-primary-subtle text-primary mb-2"><i class="bi bi-send"></i></div>
+      <div class="stat-value" id="statApplied">-</div>
+      <div class="stat-label">Applied</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="stat-icon bg-warning-subtle text-warning mb-2"><i class="bi bi-star"></i></div>
+      <div class="stat-value" id="statShortlisted">-</div>
+      <div class="stat-label">Shortlisted</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="stat-icon bg-info-subtle text-info mb-2"><i class="bi bi-camera-video"></i></div>
+      <div class="stat-value" id="statInterview">-</div>
+      <div class="stat-label">Interviews</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="stat-icon bg-success-subtle text-success mb-2"><i class="bi bi-trophy"></i></div>
+      <div class="stat-value" id="statSelected">-</div>
+      <div class="stat-label">Selected</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="stat-icon bg-danger-subtle text-danger mb-2"><i class="bi bi-x-circle"></i></div>
+      <div class="stat-value" id="statRejected">-</div>
+      <div class="stat-label">Rejected</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="jt-card p-3 h-100">
+      <h6 class="fw-semibold mb-3">Application Status Breakdown</h6>
+      <div class="chart-wrapper"><canvas id="statusChart"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="jt-card p-3 h-100">
+      <h6 class="fw-semibold mb-3">Applications Over Time</h6>
+      <div class="chart-wrapper"><canvas id="timeChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Upcoming interviews & recent applications -->
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="jt-card p-3 h-100">
+      <h6 class="fw-semibold mb-3"><i class="bi bi-camera-video me-1"></i>Upcoming Interviews</h6>
+      <div id="upcomingInterviews"><div class="spinner-wrapper"><div class="spinner-border text-primary"></div></div></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="jt-card p-3 h-100">
+      <h6 class="fw-semibold mb-3"><i class="bi bi-clock-history me-1"></i>Recent Applications</h6>
+      <div id="recentApplications"><div class="spinner-wrapper"><div class="spinner-border text-primary"></div></div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  if (!JobTrack.requireAuth()) { /* redirected */ }
+
+  async function loadDashboard() {
+    try {
+      const data = await JobTrack.apiFetch("/api/dashboard/");
+      renderStats(data);
+      renderStatusChart(data.status_breakdown);
+      renderTimeChart(data.applications_over_time);
+      renderUpcomingInterviews(data.upcoming_interviews);
+      renderRecentApplications(data.recent_applications);
+    } catch (err) {
+      if (err.status) JobTrack.showAlert("alertBox", JobTrack.formatErrors(err.data));
+    }
+  }
+
+  function renderStats(data) {
+    document.getElementById("statTotal").textContent = data.total_applications;
+    document.getElementById("statApplied").textContent = data.applied;
+    document.getElementById("statShortlisted").textContent = data.shortlisted;
+    document.getElementById("statInterview").textContent = data.interview;
+    document.getElementById("statSelected").textContent = data.selected;
+    document.getElementById("statRejected").textContent = data.rejected;
+  }
+
+  function renderStatusChart(breakdown) {
+    const ctx = document.getElementById("statusChart");
+    const colors = {
+      Applied: "#1d4ed8", Shortlisted: "#92610a", Interview: "#6d28d9",
+      Selected: "#15803d", Rejected: "#b91c1c", Withdrawn: "#4b5563",
+    };
+    new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: breakdown.map((b) => b.status),
+        datasets: [{
+          data: breakdown.map((b) => b.count),
+          backgroundColor: breakdown.map((b) => colors[b.status] || "#9ca3af"),
+          borderWidth: 0,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: "bottom", labels: { boxWidth: 12, padding: 14 } } },
+      },
+    });
+  }
+
+  function renderTimeChart(monthly) {
+    const ctx = document.getElementById("timeChart");
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: monthly.map((m) => m.month),
+        datasets: [{
+          label: "Applications",
+          data: monthly.map((m) => m.count),
+          borderColor: "#4f46e5",
+          backgroundColor: "rgba(79,70,229,0.12)",
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        plugins: { legend: { display: false } },
+      },
+    });
+  }
+
+  function renderUpcomingInterviews(interviews) {
+    const el = document.getElementById("upcomingInterviews");
+    if (!interviews.length) {
+      el.innerHTML = `<div class="jt-empty-state py-4"><i class="bi bi-calendar-x"></i>No upcoming interviews.</div>`;
+      return;
+    }
+    el.innerHTML = `<div class="table-responsive"><table class="table table-jt align-middle mb-0">
+      <thead><tr><th>Company</th><th>Job Title</th><th>Date</th><th>Time</th><th>Type</th><th></th></tr></thead>
+      <tbody>${interviews.map((i) => `
+        <tr>
+          <td>${JobTrack.escapeHtml(i.company_name)}</td>
+          <td>${JobTrack.escapeHtml(i.job_title)}</td>
+          <td>${JobTrack.formatDate(i.interview_date)}</td>
+          <td>${JobTrack.formatTime(i.interview_time)}</td>
+          <td><span class="badge bg-light text-dark border">${i.interview_type}</span></td>
+          <td>${i.meeting_link ? `<a href="${JobTrack.escapeHtml(i.meeting_link)}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-camera-video"></i></a>` : ""}</td>
+        </tr>`).join("")}
+      </tbody></table></div>`;
+  }
+
+  function renderRecentApplications(apps) {
+    const el = document.getElementById("recentApplications");
+    if (!apps.length) {
+      el.innerHTML = `<div class="jt-empty-state py-4"><i class="bi bi-inbox"></i>No applications yet.</div>`;
+      return;
+    }
+    el.innerHTML = `<div class="table-responsive"><table class="table table-jt align-middle mb-0">
+      <thead><tr><th>Company</th><th>Job Title</th><th>Status</th><th>Date</th><th></th></tr></thead>
+      <tbody>${apps.map((a) => `
+        <tr>
+          <td>${JobTrack.escapeHtml(a.company_name)}</td>
+          <td>${JobTrack.escapeHtml(a.job_title)}</td>
+          <td>${JobTrack.statusBadge(a.status)}</td>
+          <td>${JobTrack.formatDate(a.application_date)}</td>
+          <td><a href="/applications/${a.id}/" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+        </tr>`).join("")}
+      </tbody></table></div>`;
+  }
+
+  loadDashboard();
+</script>
+{% endblock %}

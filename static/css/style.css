@@ -1,0 +1,204 @@
+/* ---------------------------------------------------------------------
+   JobTrack — custom styling on top of Bootstrap 5
+   Keeps things clean, minimal, and professional (no heavy overrides).
+--------------------------------------------------------------------- */
+
+:root {
+  --jt-primary: #4f46e5;
+  --jt-primary-dark: #4338ca;
+  --jt-bg: #f5f6fa;
+  --jt-surface: #ffffff;
+  --jt-border: #e5e7eb;
+  --jt-text-muted: #6b7280;
+  --jt-radius: 0.75rem;
+}
+
+body {
+  background-color: var(--jt-bg);
+  color: #1f2937;
+  font-family: "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ---------------- Navbar ---------------- */
+.jt-navbar {
+  background-color: var(--jt-surface);
+  border-bottom: 1px solid var(--jt-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.jt-brand {
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--jt-primary) !important;
+  letter-spacing: -0.02em;
+}
+
+.jt-navbar .nav-link {
+  color: #374151;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.9rem;
+}
+
+.jt-navbar .nav-link.active,
+.jt-navbar .nav-link:hover {
+  background-color: #eef2ff;
+  color: var(--jt-primary-dark);
+}
+
+/* ---------------- Auth pages ---------------- */
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #eef2ff 0%, #f5f6fa 60%);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--jt-surface);
+  border-radius: var(--jt-radius);
+  border: 1px solid var(--jt-border);
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+  padding: 2.25rem;
+}
+
+.auth-card .jt-brand {
+  font-size: 1.6rem;
+}
+
+/* ---------------- Cards & containers ---------------- */
+.jt-card {
+  background: var(--jt-surface);
+  border: 1px solid var(--jt-border);
+  border-radius: var(--jt-radius);
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.04);
+}
+
+.jt-page-title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.jt-page-subtitle {
+  color: var(--jt-text-muted);
+}
+
+/* ---------------- Stat cards (dashboard) ---------------- */
+.stat-card {
+  background: var(--jt-surface);
+  border: 1px solid var(--jt-border);
+  border-radius: var(--jt-radius);
+  padding: 1.25rem 1.4rem;
+  height: 100%;
+}
+
+.stat-card .stat-value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stat-card .stat-label {
+  color: var(--jt-text-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+/* ---------------- Status badges ---------------- */
+.status-badge {
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.4em 0.7em;
+  border-radius: 999px;
+}
+
+.badge-status-applied { background-color: #dbeafe; color: #1d4ed8; }
+.badge-status-shortlisted { background-color: #fef9c3; color: #92610a; }
+.badge-status-interview { background-color: #ede9fe; color: #6d28d9; }
+.badge-status-selected { background-color: #dcfce7; color: #15803d; }
+.badge-status-rejected { background-color: #fee2e2; color: #b91c1c; }
+.badge-status-withdrawn { background-color: #e5e7eb; color: #4b5563; }
+
+/* ---------------- Tables ---------------- */
+.table-jt thead th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--jt-text-muted);
+  border-bottom-width: 1px;
+  white-space: nowrap;
+}
+
+.table-jt tbody tr:hover {
+  background-color: #fafafa;
+}
+
+/* ---------------- Buttons ---------------- */
+.btn-primary {
+  background-color: var(--jt-primary);
+  border-color: var(--jt-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--jt-primary-dark);
+  border-color: var(--jt-primary-dark);
+}
+
+.btn-outline-primary {
+  color: var(--jt-primary);
+  border-color: var(--jt-primary);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--jt-primary);
+  border-color: var(--jt-primary);
+}
+
+/* ---------------- Misc ---------------- */
+.jt-empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--jt-text-muted);
+}
+
+.jt-empty-state i {
+  font-size: 2.5rem;
+  color: #c7cbe0;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.demo-banner {
+  background-color: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  border-radius: var(--jt-radius);
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 280px;
+}
+
+.spinner-wrapper {
+  text-align: center;
+  padding: 2rem;
+}
