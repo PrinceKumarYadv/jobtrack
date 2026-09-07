@@ -8,3 +8,7 @@ python-decouple==3.8
 Pillow==10.3.0
 gunicorn==22.0.0
 whitenoise==6.7.0
+
+# PostgreSQL / production database
+dj-database-url==2.2.0
+psycopg2-binary==2.9.9
